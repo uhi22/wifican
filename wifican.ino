@@ -7,18 +7,16 @@
 const char* ssid     = WIFI_SSID; // Change this to your WiFi SSID
 const char* password = WIFI_PASSWORD; // Change this to your WiFi password
 
-const char* host = "api.thingspeak.com"; // This should not be changed
-const int httpPort = 80; // This should not be changed
-const String channelID   = "2005329"; // Change this to your channel ID
-const String writeApiKey = "V6YOTILH9I7D51F9"; // Change this to your Write API key
-const String readApiKey = "34W6LGLIFXD56MPM"; // Change this to your Read API key
+uint8_t isWifiConnected;
+uint32_t lastBroadcast;
+WiFiUDP wifiUDPServer;
+WiFiServer wifiTelnetServer;
+WiFiClient telnetClient;
 
-// The default example accepts one data filed named "field1"
-// For your own server you can ofcourse create more of them.
-int field1 = 0;
+void toggleRXLED()
+{
+}
 
-int numberOfResults = 3; // Number of results to be read
-int fieldNumber = 1; // Field number which will be read out
 
 void setup()
 {
@@ -43,54 +41,13 @@ void setup()
     Serial.println("WiFi connected");
     Serial.println("IP address: ");
     Serial.println(WiFi.localIP());
+    isWifiConnected = 1;
+    wifiTelnetServer.begin(23); //setup as a telnet server
+    wifiTelnetServer.setNoDelay(true);
 }
 
-void readResponse(WiFiClient *client){
-  unsigned long timeout = millis();
-  while(client->available() == 0){
-    if(millis() - timeout > 5000){
-      Serial.println(">>> Client Timeout !");
-      client->stop();
-      return;
-    }
-  }
-
-  // Read all the lines of the reply from server and print them to Serial
-  while(client->available()) {
-    String line = client->readStringUntil('\r');
-    Serial.print(line);
-  }
-
-  Serial.printf("\nClosing connection\n\n");
-}
 
 void loop(){
-  WiFiClient client;
-  String footer = String(" HTTP/1.1\r\n") + "Host: " + String(host) + "\r\n" + "Connection: close\r\n\r\n";
-
-  // WRITE --------------------------------------------------------------------------------------------
-  if (!client.connect(host, httpPort)) {
-    return;
-  }
-
-  client.print("GET /update?api_key=" + writeApiKey + "&field1=" + field1 + footer);
-  readResponse(&client);
-
-  // READ --------------------------------------------------------------------------------------------
-
-  String readRequest = "GET /channels/" + channelID + "/fields/" + fieldNumber + ".json?results=" + numberOfResults + " HTTP/1.1\r\n" +
-                       "Host: " + host + "\r\n" +
-                       "Connection: close\r\n\r\n";
-
-  if (!client.connect(host, httpPort)) {
-    return;
-  }
-
-  client.print(readRequest);
-  readResponse(&client);
-
-  // -------------------------------------------------------------------------------------------------
-
-  ++field1;
+  wifihandler_cyclic();
   delay(10000);
 }
