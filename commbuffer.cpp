@@ -1,5 +1,9 @@
+
+#include "projectsettings.h"
 #include "commbuffer.h"
-//#include "Logger.h"
+#ifdef USE_LOGGER
+  #include "Logger.h"
+#endif
 #include "gvret_comm.h"
 
 CommBuffer::CommBuffer()

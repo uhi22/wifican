@@ -2,6 +2,7 @@
 Implements handling of the GVRET comm protocol, both sending and receiving
 */
 
+#include "projectsettings.h"
 #include "gvret_comm.h"
 //#include "SerialConsole.h"
 #include "config.h"
