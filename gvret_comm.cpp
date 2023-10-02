@@ -162,7 +162,7 @@ void GVRET_Comm_Handler::processIncomingByte(uint8_t in_byte)
         case PROTO_GET_NUMBUSES:
             transmitBuffer[transmitBufferLength++] = 0xF1;
             transmitBuffer[transmitBufferLength++] = 12;
-            transmitBuffer[transmitBufferLength++] = SysSettings.numBuses;
+            transmitBuffer[transmitBufferLength++] = 1; // SysSettings.numBuses;
             state = IDLE;
             break;
         case PROTO_GET_EXT_BUSES:
@@ -180,6 +180,7 @@ void GVRET_Comm_Handler::processIncomingByte(uint8_t in_byte)
         }
         break;
     case BUILD_CAN_FRAME:
+       #ifdef USE_CAN
         buff[1 + step] = in_byte;
         switch(step)
         {
@@ -225,6 +226,7 @@ void GVRET_Comm_Handler::processIncomingByte(uint8_t in_byte)
             }
             break;
         }
+        #endif
         step++;
         break;
         case TIME_SYNC:
@@ -338,6 +340,7 @@ void GVRET_Comm_Handler::processIncomingByte(uint8_t in_byte)
             break;
         case ECHO_CAN_FRAME:
             buff[1 + step] = in_byte;
+            #ifdef USE_CAN
             switch(step)
             {
             case 0:
@@ -383,6 +386,7 @@ void GVRET_Comm_Handler::processIncomingByte(uint8_t in_byte)
                 }
                 break;
             }
+            #endif
             step++;
             break;
         case SETUP_EXT_BUSES: //setup enable/listenonly/speed for SWCAN, Enable/Speed for LIN1, LIN2

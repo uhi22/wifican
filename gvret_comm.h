@@ -1,7 +1,9 @@
 #pragma once
 #include <Arduino.h>
 #include "config.h"
-#include "esp32_can.h"
+#ifdef USE_CAN
+  #include "esp32_can.h"
+#endif
 #include "commbuffer.h"
 
 enum STATE {
@@ -50,8 +52,10 @@ public:
     void processIncomingByte(uint8_t in_byte);
     
 private:
-    CAN_FRAME build_out_frame;
-    CAN_FRAME_FD build_out_fd_frame;
+    #ifdef USE_CAN
+      CAN_FRAME build_out_frame;
+      CAN_FRAME_FD build_out_fd_frame;
+    #endif
     int out_bus;
     uint8_t buff[20];
     int step;

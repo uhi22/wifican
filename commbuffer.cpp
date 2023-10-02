@@ -53,6 +53,7 @@ void CommBuffer::sendCharString(char *str)
     //Logger::debug("Queued %i bytes", i);
 }
 
+#ifdef USE_CAN
 void CommBuffer::sendFrameToBuffer(CAN_FRAME &frame, int whichBus)
 {
     uint8_t temp;
@@ -90,4 +91,4 @@ void CommBuffer::sendFrameToBuffer(CAN_FRAME_FD &frame, int whichBus)
         sprintf((char *)&transmitBuffer[transmitBufferLength], "\r\n");
         transmitBufferLength += 2;
 }
-
+#endif

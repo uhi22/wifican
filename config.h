@@ -33,7 +33,9 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #if 0
 #include <WiFi.h>
-#include "esp32_can.h"
+#ifdef USE_CAN
+  #include "esp32_can.h"
+#endif
 //#include <Preferences.h>
 #endif
 
