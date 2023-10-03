@@ -33,7 +33,7 @@ void GVRET_Comm_Handler::processIncomingByte(uint8_t in_byte)
         }
         else if(in_byte == 0xE7)
         {
-            useBinarySerialComm = true;
+            settings.useBinarySerialComm = true;
             //SysSettings.lawicelMode = false;
             //setPromiscuousMode(); //going into binary comm will set promisc. mode too.
         } 

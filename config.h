@@ -34,7 +34,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #if 0
 #include <WiFi.h>
 #ifdef USE_CAN
-  #include "esp32_can.h"
+  #include "esp32_can_local.h"
 #endif
 //#include <Preferences.h>
 #endif
@@ -146,7 +146,7 @@ class LAWICELHandler;
 //class ELM327Emu;
 
 extern EEPROMSettings settings;
-extern SystemSettings SysSettings;
+//extern SystemSettings SysSettings;
 //extern Preferences nvPrefs;
 extern GVRET_Comm_Handler serialGVRET;
 extern GVRET_Comm_Handler wifiGVRET;

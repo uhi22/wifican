@@ -2,7 +2,7 @@
 #include <Arduino.h>
 #include "config.h"
 #ifdef USE_CAN
-  #include "esp32_can.h"
+  #include "esp32_can_local.h"
 #endif
 
 class CommBuffer
@@ -14,7 +14,9 @@ public:
     void clearBufferedBytes();
     #ifdef USE_CAN
     void sendFrameToBuffer(CAN_FRAME &frame, int whichBus);
-    void sendFrameToBuffer(CAN_FRAME_FD &frame, int whichBus);
+    #ifdef USE_CANFD
+      void sendFrameToBuffer(CAN_FRAME_FD &frame, int whichBus);
+    #endif
     #endif
     void sendBytesToBuffer(uint8_t *bytes, size_t length);
     void sendByteToBuffer(uint8_t byt);

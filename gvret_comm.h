@@ -2,7 +2,7 @@
 #include <Arduino.h>
 #include "config.h"
 #ifdef USE_CAN
-  #include "esp32_can.h"
+  #include "esp32_can_local.h"
 #endif
 #include "commbuffer.h"
 
@@ -54,14 +54,15 @@ public:
 private:
     #ifdef USE_CAN
       CAN_FRAME build_out_frame;
-      CAN_FRAME_FD build_out_fd_frame;
+      #ifdef USE_CANFD
+        CAN_FRAME_FD build_out_fd_frame;
+      #endif
     #endif
     int out_bus;
     uint8_t buff[20];
     int step;
     STATE state;
     uint32_t build_int;
-    uint8_t useBinarySerialComm;
 
     uint8_t checksumCalc(uint8_t *buffer, int length);
 };

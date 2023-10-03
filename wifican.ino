@@ -7,6 +7,7 @@
 #include "gvret_comm.h"
 #include "can_common_local.h"
 #include "esp32_can_local.h"
+#include "can_manager.h"
 
 const char* ssid     = WIFI_SSID; // Change this to your WiFi SSID
 const char* password = WIFI_PASSWORD; // Change this to your WiFi password
@@ -20,6 +21,7 @@ WiFiUDP wifiUDPServer;
 WiFiServer wifiTelnetServer;
 WiFiClient telnetClient;
 GVRET_Comm_Handler wifiGVRET; /* GVRET over the wifi telnet port */
+CANManager canManager; /* keeps track of bus load and abstracts away some details of how things are done */
 
 void toggleRXLED()
 {
@@ -77,6 +79,13 @@ void setup()
     Serial.println("telnet is listening");
     delay(500);
 
+    /***** Prepare settings *****/
+    settings.canSettings[0].nomSpeed = 500000;
+    settings.canSettings[0].enabled = true;
+    settings.canSettings[0].listenOnly = false;
+    //settings.canSettings[0].fdSpeed = 5000000;
+    settings.canSettings[0].fdMode = false;    
+
     /***** Configure pins *****/
     //#ifdef USE_CAN
       Serial.println("CAN init..."); delay(500);
@@ -84,11 +93,12 @@ void setup()
       CAN0.setCANPins(GPIO_NUM_4, GPIO_NUM_5);
       /* Initialize builtin CAN controller at the specified speed */
       Serial.println("CAN init2..."); delay(500);
-	    if(CAN0.begin(500000))	{
-		    Serial.println("Builtin CAN Init OK ...");
-	    } else {
-		    Serial.println("BuiltIn CAN Init Failed ...");
-	    }
+      canManager.setup();
+	    //if(CAN0.begin(500000))	{
+		  //  Serial.println("Builtin CAN Init OK ...");
+	    //} else {
+		  //  Serial.println("BuiltIn CAN Init Failed ...");
+	    //}
       //CAN0.setRXFilter(0, 0x100, 0x700, false);
 	    //CAN0.watchFor(); //allow everything else through
 	    //CAN0.setCallback(0, handleCAN0CB);
@@ -103,6 +113,7 @@ void setup()
 
 void loop(){
   wifihandler_cyclic();
+  canManager.loop();
 
     size_t wifiLength = wifiGVRET.numAvailableBytes();
 
@@ -119,7 +130,7 @@ void loop(){
     if (micros() - last1000ms > 1000000uL ) {
         last1000ms = micros();
         /* this part runs once per second */
-        demoCanTransmit();
+        //demoCanTransmit();
     }
 
 }
