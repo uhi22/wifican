@@ -29,6 +29,12 @@ The better way would be to add fixes to the ESP32RET, but for experimentation th
 - Kicked-out bluetooth completely.
 - Kicked-out serial GVRET completely.
 
+So we end-up with the following features for the moment:
+- Single CAN channel. Configured to 500kBaud.
+- Wifi connection to an existing wifi network (configured in the wifi_credentials.h file)
+- Connection between PC and wifican runs over the existing wifi, using GVRET over wifi, which is in fact a telnet TCP connection.
+- The usb-serial-port is used just for debugging. No serial GVRET support.
+
 ## Quick Start Guide
 
 - Install the Arduino IDE and the ESP32s3 board support.
