@@ -3,7 +3,7 @@
 Bridge between Wifi and CAN.
 
 ![image](doc/wifican_hardware_top.jpg)
-![image](doc/wifican_hardware_top.jpg)
+![image](doc/wifican_hardware_bottom.jpg)
 
 ## Motivation
 
