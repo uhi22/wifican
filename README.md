@@ -2,6 +2,9 @@
 
 Bridge between Wifi and CAN.
 
+![image](doc/wifican_hardware_top.jpg)
+![image](doc/wifican_hardware_top.jpg)
+
 ## Motivation
 
 SavvyCAN is a great open-source CAN tool, and the ESP32RET is assumingly a pretty good interface between the PC and multiple CANs.
@@ -25,6 +28,20 @@ The better way would be to add fixes to the ESP32RET, but for experimentation th
 - One hard-coded configuration of the board. No EEPROM parameters.
 - Kicked-out bluetooth completely.
 - Kicked-out serial GVRET completely.
+
+## Quick Start Guide
+
+- Install the Arduino IDE and the ESP32s3 board support.
+- Solder a 3.3V CAN transceiver board to the ESP32s3 board. This needs just four wires: 3.3V, ground, CAN_RX (pin 4), CAN_TX (pin 5).
+- Connect the ESP32s3 board at the "COM" USB (not the "USB"-USB) to the PC.
+- Rename the wifi_credentials_template.h to wifi_credentials.h, and enter your wifi credentials there.
+- Build and download the project in the Arduino IDE.
+- Open SavvyCAN, choose menu -> connection -> open connection window.
+- Choose "Add new device connection", and "Network connection (GVRET)". In the IP address field there should automatically appear the IP of the wifican device. If not, check whether the wifican device and your PC are in the same Wifi network, or thy entering the IP manually.
+- The wifican should now be visible in the connection list, with status "Connected".
+- In the connection window, set the bus speed and check the "Enable bus" checkbox.
+- Connect the CANH and CANL to your CAN network. The SavvyCAN should show the incoming traffic.
+- SavvyCAN -> Menu -> SendFrames -> Custom allows you to transmit frames.
 
 ## Results of reverse-engineering
 
