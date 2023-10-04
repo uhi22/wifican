@@ -30,7 +30,7 @@ void wifihandler_cyclic(void) {
                                 uint8_t inByt;
                                 inByt = telnetClient.read();
                                 //SysSettings.isWifiActive = true;
-                                Serial.println(inByt); /* echo to serial - just for debugging. Don't leave this on! */
+                                //Serial.println(inByt); /* echo to serial - just for debugging. Don't leave this on! */
                                 wifiGVRET.processIncomingByte(inByt);
                             }
       }

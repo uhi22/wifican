@@ -6,7 +6,7 @@ Implements handling of the GVRET comm protocol, both sending and receiving
 #include "gvret_comm.h"
 //#include "SerialConsole.h"
 #include "config.h"
-//#include "can_manager.h"
+#include "can_manager.h"
 
 void toggleTXLED();
 void toggleRXLED();
@@ -222,8 +222,9 @@ void GVRET_Comm_Handler::processIncomingByte(uint8_t in_byte)
                 state = IDLE;
                 //this would be the checksum byte. Compute and compare.
                 //temp8 = checksumCalc(buff, step);
+                //Serial.println("BUILD_CAN_FRAME will send frame");
                 build_out_frame.rtr = 0;
-                //todo Uwe if (out_bus < NUM_BUSES) canManager.sendFrame(canBuses[out_bus], build_out_frame);
+                canManager.sendFrame(&CAN0, build_out_frame);
             }
             break;
         }
