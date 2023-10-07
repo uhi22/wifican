@@ -60,7 +60,7 @@ void wifihandler_sendAliveToTelnet(void) {
   uint8_t i;
   uint16_t aliveCanID;
   i=0;
-  aliveCanID = 0x7ff; /* simulated CAN ID, just taking the last valid. */
+  aliveCanID = 0x1000; /* simulated CAN ID. Real IDs are in range 0 to 0x7FF. */
   #define whichBus 0
 
         alivebuffer[i++] = 0xF1;
