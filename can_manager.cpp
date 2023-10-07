@@ -15,13 +15,15 @@ CANManager::CANManager()
 
 void CANManager::setup()
 {
+        CAN0.enable();
+        CAN0.begin(settings.canSettings[0].nomSpeed, 255);
+        Serial.printf("Enabled CAN%u with speed %u\n", 0, settings.canSettings[0].nomSpeed); Serial.flush();
+        Serial.println("xxx1"); Serial.flush();
 
-            CAN0.enable();
-                CAN0.begin(settings.canSettings[0].nomSpeed, 255);
-                Serial.printf("Enabled CAN%u with speed %u\n", 0, settings.canSettings[0].nomSpeed);
-
-                CAN0.setListenOnlyMode(false);
-            CAN0.watchFor();
+        CAN0.setListenOnlyMode(false);
+        Serial.println("xxx2"); Serial.flush();
+        CAN0.watchFor();
+        Serial.println("xxx3"); Serial.flush();
 
         busLoad[0].bitsPerQuarter = settings.canSettings[0].nomSpeed / 4;
         busLoad[0].bitsSoFar = 0;
@@ -29,6 +31,8 @@ void CANManager::setup()
         if (busLoad[0].bitsPerQuarter == 0) busLoad[0].bitsPerQuarter = 125000;
 
     busLoadTimer = millis();
+    Serial.println("CANManager::setup done"); Serial.flush();
+
 }
 
 void CANManager::addBits(int offset, CAN_FRAME &frame)

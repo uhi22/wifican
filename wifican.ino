@@ -11,8 +11,19 @@
 
 const char* ssid     = WIFI_SSID; // Change this to your WiFi SSID
 const char* password = WIFI_PASSWORD; // Change this to your WiFi password
+#define WIFI_WIFICAN_SSID "wifican" /* In case we are the access point, use this WIFI SSID ... */
+#define WIFI_WIFICAN_PASSWORD "topsecret" /* ... and WIFI password */
+
+#define PIN_MODESWITCH_SUPPLY 47
+#define PIN_TESTA 21
+#define PIN_MODESWITCH_INPUT 35
+
 
 EEPROMSettings settings;
+uint8_t wifiMode;
+#define WIFI_MODE_ACCESS_POINT 0 /* wifican acts as access point. It creates a new wifi network. */
+#define WIFI_MODE_STATION 1 /* wifican acts as station. It connects to an existing wifi network. */
+
 uint8_t isWifiConnected;
 uint32_t lastBroadcast;
 uint32_t lastFlushMicros;
@@ -54,25 +65,52 @@ void setup()
     Serial.print("Setup: priority = ");
     Serial.println(uxTaskPriorityGet(NULL));
 
-    /*** We start by connecting to a WiFi network ***/
+    /* Setup the supply for the mode switch, and read the switch */
+    pinMode(PIN_TESTA, OUTPUT);
+    pinMode(PIN_MODESWITCH_SUPPLY, OUTPUT);
+    digitalWrite(PIN_MODESWITCH_SUPPLY, HIGH);
+    digitalWrite(PIN_TESTA, HIGH);
+    delay(10);
+    wifiMode = digitalRead(PIN_MODESWITCH_INPUT);
+    Serial.print("wifiMode");
+    Serial.println(wifiMode);
+    digitalWrite(PIN_TESTA, LOW);
+    delay(20);
+    digitalWrite(PIN_TESTA, HIGH);
+    delay(10);
+    digitalWrite(PIN_TESTA, LOW);
+    WiFi.onEvent(WiFiEvent);
+    if (wifiMode == WIFI_MODE_STATION) {
+      /*** We start by connecting to a WiFi network ***/
+      Serial.println();
+      Serial.println("******************************************************");
+      Serial.print("WifiMode is 'station'. Connecting to ");
+      Serial.println(ssid);
+      WiFi.begin(ssid, password);
 
-    Serial.println();
-    Serial.println("******************************************************");
-    Serial.print("Connecting to ");
-    Serial.println(ssid);
-
-    WiFi.begin(ssid, password);
-
-    while (WiFi.status() != WL_CONNECTED) {
+      while (WiFi.status() != WL_CONNECTED) {
         delay(500);
         Serial.print(".");
+      }
+      Serial.println("");
+      Serial.println("WiFi connected");
+      Serial.println("IP address: ");
+      Serial.println(WiFi.localIP());
+      isWifiConnected = 1;
+    } else {
+      Serial.println();
+      Serial.println("******************************************************");
+      Serial.print("WifiMode is 'access point'.");
+      WiFi.mode(WIFI_AP);
+      WiFi.setSleep(true);
+      WiFi.softAP((const char *)WIFI_WIFICAN_SSID, (const char *)WIFI_WIFICAN_PASSWORD);
+      Serial.println("SoftAP created.");
+               Serial.print("Wifi setup as SSID ");
+                Serial.println(WIFI_WIFICAN_SSID);
+                Serial.print("IP address: ");
+                Serial.println(WiFi.softAPIP());      
+      isWifiConnected = 0;
     }
-
-    Serial.println("");
-    Serial.println("WiFi connected");
-    Serial.println("IP address: ");
-    Serial.println(WiFi.localIP());
-    isWifiConnected = 1;
     /**** setup a telnet server. We will be connected by e.g. Savvycan using telnet. */
     wifiTelnetServer.begin(23);
     wifiTelnetServer.setNoDelay(true);
@@ -133,4 +171,48 @@ void loop(){
         //demoCanTransmit();
     }
 
+}
+
+void WiFiEvent(WiFiEvent_t event){
+    switch(event) {
+        case ARDUINO_EVENT_WIFI_AP_START:
+            Serial.println("AP Started");
+            //WiFi.softAPsetHostname(AP_SSID);
+            break;
+        case ARDUINO_EVENT_WIFI_AP_STOP:
+            Serial.println("AP Stopped");
+            break;
+        case ARDUINO_EVENT_WIFI_STA_START:
+            Serial.println("STA Started");
+            //WiFi.setHostname(AP_SSID);
+            break;
+        case ARDUINO_EVENT_WIFI_STA_CONNECTED:
+            Serial.println("STA Connected");
+            WiFi.enableIpV6();
+            break;
+        case ARDUINO_EVENT_WIFI_STA_GOT_IP6:
+            Serial.print("STA IPv6: ");
+            Serial.println(WiFi.localIPv6());
+            break;
+        case ARDUINO_EVENT_WIFI_STA_GOT_IP:
+            Serial.print("STA IPv4: ");
+            Serial.println(WiFi.localIP());
+            break;
+        case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
+            Serial.println("STA Disconnected");
+            break;
+        case ARDUINO_EVENT_WIFI_STA_STOP:
+            Serial.println("STA Stopped");
+            break;
+        case ARDUINO_EVENT_WIFI_AP_STAIPASSIGNED:
+            Serial.println("AP Station IP Assigned");
+            isWifiConnected = true;
+            break;
+        case ARDUINO_EVENT_WIFI_AP_STADISCONNECTED:
+            Serial.println("AP Station Disconnected");
+            isWifiConnected = false;
+            break;
+        default:
+            break;
+    }
 }
