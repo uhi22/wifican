@@ -34,6 +34,8 @@ WiFiClient telnetClient;
 GVRET_Comm_Handler wifiGVRET; /* GVRET over the wifi telnet port */
 CANManager canManager; /* keeps track of bus load and abstracts away some details of how things are done */
 
+extern volatile uint32_t expCounter;
+
 void toggleRXLED()
 {
 }
@@ -169,6 +171,8 @@ void loop(){
         last1000ms = micros();
         /* this part runs once per second */
         //demoCanTransmit();
+        Serial.print("debug: ");
+        Serial.println(expCounter);
     }
 
 }

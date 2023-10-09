@@ -20,6 +20,33 @@ twai_filter_config_t twai_filters_cfg = TWAI_FILTER_CONFIG_ACCEPT_ALL();
 QueueHandle_t callbackQueue;
 QueueHandle_t rx_queue;
 
+/*************************** begin experimental ***************************************/
+#define EXPERIMENTAL_OWN_TWAI_DRIVER
+#ifdef EXPERIMENTAL_OWN_TWAI_DRIVER
+#include <soc/soc.h>
+#include <soc/periph_defs.h> /* for ETS_TWAI_INTR_SOURCE */
+//#include "esp_intr_alloc.h"
+#include <hal/twai_hal.h>
+#include <driver/periph_ctrl.h>
+#include <esp_rom_gpio.h>
+
+#define DRIVER_DEFAULT_INTERRUPTS   0xE7        //Exclude data overrun (bit[3]) and brp_div (bit[4])
+
+#ifdef CONFIG_TWAI_ISR_IN_IRAM
+#define TWAI_ISR_ATTR       IRAM_ATTR
+#define TWAI_MALLOC_CAPS    (MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT)
+#else
+#define TWAI_TAG "TWAI"
+#define TWAI_ISR_ATTR
+#define TWAI_MALLOC_CAPS    MALLOC_CAP_DEFAULT
+#endif  //CONFIG_TWAI_ISR_IN_IRAM
+intr_handle_t experimental_isr_handle;
+static twai_hal_context_t twai_context;
+volatile uint32_t expCounter;
+uint8_t experimentalDriverIsInitialized = 0;
+#endif
+/************************************* end experimental *********************************/
+
 //because of the way the TWAI library works, it's just easier to store the valid timings here and anything not found here
 //is just plain not supported. If you need a different speed then add it here. Be sure to leave the zero record at the end
 //as it serves as a terminator
@@ -214,9 +241,81 @@ int ESP32CAN::_setFilter(uint32_t id, uint32_t mask, bool extended)
     return -1;
 }
 
+TWAI_ISR_ATTR static void experimentalInterrupt(void *arg) {
+  expCounter++;
+   // original from twai_intr_handler_main()
+  //events = twai_hal_get_events(&twai_context);    //Get the events that triggered the interrupt
+  //if (events & TWAI_HAL_EVENT_RX_BUFF_FRAME) {
+  //uint32_t msg_count = twai_hal_get_rx_msg_count(&twai_context);
+  // for (uint32_t i = 0; i < msg_count; i++) {
+  //      twai_hal_frame_t frame;
+  // if (twai_hal_read_rx_buffer_and_clear(&twai_context, &frame)) {
+  // }
+  //}
+}
+
+
+static void twai_configure_gpio(gpio_num_t tx, gpio_num_t rx, gpio_num_t clkout, gpio_num_t bus_status)
+{
+    //Set TX pin
+    gpio_set_pull_mode(tx, GPIO_FLOATING);
+    esp_rom_gpio_connect_out_signal(tx, TWAI_TX_IDX, false, false);
+    esp_rom_gpio_pad_select_gpio(tx);
+
+    //Set RX pin
+    gpio_set_pull_mode(rx, GPIO_FLOATING);
+    esp_rom_gpio_connect_in_signal(rx, TWAI_RX_IDX, false);
+    esp_rom_gpio_pad_select_gpio(rx);
+    gpio_set_direction(rx, GPIO_MODE_INPUT);
+
+    //Configure output clock pin (Optional)
+    if (clkout >= 0 && clkout < GPIO_NUM_MAX) {
+        gpio_set_pull_mode(clkout, GPIO_FLOATING);
+        esp_rom_gpio_connect_out_signal(clkout, TWAI_CLKOUT_IDX, false, false);
+        esp_rom_gpio_pad_select_gpio(clkout);
+    }
+
+    //Configure bus status pin (Optional)
+    if (bus_status >= 0 && bus_status < GPIO_NUM_MAX) {
+        gpio_set_pull_mode(bus_status, GPIO_FLOATING);
+        esp_rom_gpio_connect_out_signal(bus_status, TWAI_BUS_OFF_ON_IDX, false, false);
+        esp_rom_gpio_pad_select_gpio(bus_status);
+    }
+}
+
+void experimentalInitOne(void) {
+  Serial.println("ExpInitOne: 1"); Serial.flush();
+  if (experimentalDriverIsInitialized) {
+    Serial.println("experimental driver is already initialized. Nothing to do.");
+    return;
+  }
+  periph_module_reset(PERIPH_TWAI_MODULE);
+  periph_module_enable(PERIPH_TWAI_MODULE);            //Enable APB CLK to TWAI peripheral
+  bool init = twai_hal_init(&twai_context);
+  assert(init);
+  (void)init;
+  twai_hal_configure(&twai_context, &twai_speed_cfg, &twai_filters_cfg, DRIVER_DEFAULT_INTERRUPTS, twai_general_cfg.clkout_divider);
+  //TWAI_EXIT_CRITICAL();
+
+    //Allocate GPIO and Interrupts
+    twai_configure_gpio(twai_general_cfg.tx_io, twai_general_cfg.rx_io, twai_general_cfg.clkout_io, twai_general_cfg.bus_off_io);  
+  ESP_ERROR_CHECK(esp_intr_alloc(ETS_TWAI_INTR_SOURCE, twai_general_cfg.intr_flags, experimentalInterrupt, NULL, &experimental_isr_handle));
+  Serial.println("ExpInitOne: 2"); Serial.flush();
+
+  twai_hal_start(&twai_context, twai_general_cfg.mode);
+  experimentalDriverIsInitialized = 1;
+  Serial.println("ExpInitOne: 3"); Serial.flush();
+}
+
+void experimentalInitTwo(void) {
+  Serial.println("ExpInitTwo: 1"); Serial.flush();
+  //esp_intr_dump();   
+  Serial.println("ExpInitTwo: 2"); Serial.flush();
+}
+
 void ESP32CAN::_init()
 {
-    if (debuggingMode) { Serial.println("Built in CAN Init"); Serial.flush(); }
+    if (debuggingMode) { Serial.println("Built in CAN Init in _init()"); Serial.flush(); }
     for (int i = 0; i < BI_NUM_FILTERS; i++)
     {
         filters[i].id = 0;
@@ -226,6 +325,7 @@ void ESP32CAN::_init()
     }
     if (debuggingMode) { Serial.println("Built in CAN Init Step 2"); Serial.flush(); }
 
+    #ifndef EXPERIMENTAL_OWN_TWAI_DRIVER
     if (!initializedResources)
     {
         if (debuggingMode) { Serial.println("Built in CAN Init Step 3"); Serial.flush(); }
@@ -247,10 +347,12 @@ void ESP32CAN::_init()
         if (debuggingMode) { Serial.println("Built in CAN Init Step x"); Serial.flush(); }
         initializedResources = true;
     }
+    #endif
 }
 
 uint32_t ESP32CAN::init(uint32_t ul_baudrate)
 {
+  Serial.println("Built in CAN Init in init with baudrate"); Serial.flush(); 
     _init();
     set_baudrate(ul_baudrate);
     if (debuggingMode)
@@ -316,6 +418,7 @@ uint32_t ESP32CAN::set_baudrate(uint32_t ul_baudrate)
         if (valid_timings[idx].speed == ul_baudrate)
         {
             twai_speed_cfg = valid_timings[idx].cfg;
+            Serial.println("In set_baudrate() will call enable().");
             enable();
             return ul_baudrate;
         }
@@ -334,22 +437,20 @@ void ESP32CAN::setListenOnlyMode(bool state)
 
 void ESP32CAN::enable()
 {
+  experimentalInitOne();
+
+  #ifndef EXPERIMENTAL_OWN_TWAI_DRIVER
     if (twai_driver_install(&twai_general_cfg, &twai_speed_cfg, &twai_filters_cfg) == ESP_OK)
     {
         Serial.println("TWAI Driver installed");
-    }
-    else
-    {
+    } else {
         Serial.println("Failed to install TWAI driver");
         return;
     }
     // Start TWAI driver
-    if (twai_start() == ESP_OK)
-    {
+    if (twai_start() == ESP_OK) {
         Serial.println("TWAI Driver started");
-    }
-    else
-    {
+    } else {
         Serial.println("Failed to start TWAI driver");
         return;
     }
@@ -359,6 +460,9 @@ void ESP32CAN::enable()
       xTaskCreatePinnedToCore(&task_LowLevelRX, "CAN_LORX", 4096, this, 19, NULL, 1);
       isCanLowLevelRxTaskCreated = true;
     }
+    #endif
+    /* experimental: second part of the init */
+    experimentalInitTwo();
 }
 
 void ESP32CAN::disable()
