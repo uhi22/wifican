@@ -63,6 +63,7 @@ void CANManager::displayFrame(CAN_FRAME &frame, int whichBus)
     //} 
     //else 
     {
+        //Serial.print("calling sendFrameToBuffer "); Serial.println(frame.id, HEX);
         wifiGVRET.sendFrameToBuffer(frame, whichBus);
     }
 }
@@ -88,7 +89,13 @@ void CANManager::loop()
         }
     }
 
-
+    //CAN0.demo_checkForReceivedFramesAndConsume();
+    while (CAN0.isReceiveDataAvailable() && (maxLength < (WIFI_BUFF_SIZE - 80))) {
+        CAN0.consumeReceivedData(incoming);
+        displayFrame(incoming, 0);
+        maxLength = wifiGVRET.numAvailableBytes();
+    }
+    
         while ( (CAN0.available() > 0) && (maxLength < (WIFI_BUFF_SIZE - 80)))
         {
             if (settings.canSettings[0].fdMode == 0)

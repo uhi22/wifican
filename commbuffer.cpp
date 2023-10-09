@@ -82,6 +82,7 @@ void CommBuffer::sendFrameToBuffer(CAN_FRAME &frame, int whichBus)
         //temp = checksumCalc(buff, 11 + frame.length);
         temp = 0;
         transmitBuffer[transmitBufferLength++] = temp;
+        //Serial.printf("added %d bytes payload to buffer, now index is %d\n", frame.length, transmitBufferLength );
         //Serial.write(buff, 12 + frame.length);
     } else {
         writtenBytes = sprintf((char *)&transmitBuffer[transmitBufferLength], "%d - %x", micros(), frame.id);

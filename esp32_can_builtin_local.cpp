@@ -6,6 +6,9 @@
   Author: Collin Kidder
   
   Created: 31/1/18, significant rework 1/5/23
+
+  uhi22 / 2023-10-10 Completely reworked to NOT use the espressif TWAI handler with unreliable queues and lists. Instead
+  implement the twai interrupt directly here and use a simple FIFO.
 */
 
 #include "projectsettings.h"
@@ -25,7 +28,6 @@ QueueHandle_t rx_queue;
 #ifdef EXPERIMENTAL_OWN_TWAI_DRIVER
 #include <soc/soc.h>
 #include <soc/periph_defs.h> /* for ETS_TWAI_INTR_SOURCE */
-//#include "esp_intr_alloc.h"
 #include <hal/twai_hal.h>
 #include <driver/periph_ctrl.h>
 #include <esp_rom_gpio.h>
@@ -42,7 +44,9 @@ QueueHandle_t rx_queue;
 #endif  //CONFIG_TWAI_ISR_IN_IRAM
 intr_handle_t experimental_isr_handle;
 static twai_hal_context_t twai_context;
-volatile uint32_t expCounter;
+volatile uint32_t expCounterIsr;
+volatile uint32_t expCounterMsg;
+volatile uint32_t expCounterLostFrames;
 uint8_t experimentalDriverIsInitialized = 0;
 #endif
 /************************************* end experimental *********************************/
@@ -133,28 +137,6 @@ void CAN_WatchDog_Builtin( void *pvParameters )
     }
 }
 
-//infinitely loops accepting frames from the TWAI driver. Calls
-//our processing routine which then applies the custom 32 filters and
-//decides whether to trigger callbacks or queue the frame (or throw it away).
-/* This task runs with a higher prio (19) than the setup (1) and loop (1) tasks.
-   It means, that it will block both. It relies on the fact, that the twai_receive()
-   will give the control to the OS when there is nothing to do.
-*/
-void task_LowLevelRX(void *pvParameters)
-{
-    ESP32CAN* espCan = (ESP32CAN*)pvParameters;
-    uint32_t cnt;
-    while (1)
-    {
-        cnt++;
-        //Serial.println(cnt); Serial.flush();
-        twai_message_t message;
-        if (twai_receive(&message, pdMS_TO_TICKS(100)) == ESP_OK)
-        {
-            espCan->processFrame(message);
-        }
-    }
-}
 
 /*
 Issue callbacks to registered functions and objects
@@ -241,17 +223,71 @@ int ESP32CAN::_setFilter(uint32_t id, uint32_t mask, bool extended)
     return -1;
 }
 
-TWAI_ISR_ATTR static void experimentalInterrupt(void *arg) {
-  expCounter++;
+#define CAN_RX_FIFO_SIZE 20
+uint8_t iRxFifoWriteIndex = 0;
+uint8_t iRxFifoReadIndex = 0;
+twai_hal_frame_t aRxFifo[CAN_RX_FIFO_SIZE];
+
+uint8_t ESP32CAN::isReceiveDataAvailable(void) {
+  /* received data is available, if the write index and read index are different. */
+  return (iRxFifoWriteIndex != iRxFifoReadIndex);
+}
+
+void ESP32CAN::consumeReceivedData(CAN_FRAME &msg)
+{
+  CAN_FRAME frame;
+  if (iRxFifoWriteIndex != iRxFifoReadIndex) {
+    frame.id = aRxFifo[iRxFifoReadIndex].standard.id[0]; /* high part of ID */
+    frame.id <<= 8;
+    frame.id += aRxFifo[iRxFifoReadIndex].standard.id[1]; /* low part of ID */
+    frame.id >>= 5; /* The 11 bit ID is stored left-aligned in the driver. Make a normal ID 0 to 7ff out of it. */
+    //Serial.printf("ID %04x\n", frame.id);
+    Serial.print(".");
+    frame.length = aRxFifo[iRxFifoReadIndex].dlc;
+    memcpy(frame.data.uint8, aRxFifo[iRxFifoReadIndex].standard.data, 8);
+    iRxFifoReadIndex=(iRxFifoReadIndex+1)%CAN_RX_FIFO_SIZE;
+  }
+  msg = frame;
+}
+
+void ESP32CAN::demo_checkForReceivedFramesAndConsume(void) {
+  uint16_t id;
+  if (iRxFifoWriteIndex != iRxFifoReadIndex) {
+    id = aRxFifo[iRxFifoReadIndex].standard.id[0]; /* high part of ID */
+    id <<= 8;
+    id += aRxFifo[iRxFifoReadIndex].standard.id[1]; /* low part of ID */
+    id >>= 5; /* The 11 bit ID is stored left-aligned in the driver. Make a normal ID 0 to 7ff out of it. */
+    Serial.printf("ID %04x\n", id);
+    //Serial.println(id, HEX);
+    iRxFifoReadIndex=(iRxFifoReadIndex+1)%CAN_RX_FIFO_SIZE;
+  }
+}
+
+
+void IRAM_ATTR experimentalInterrupt(void *arg) {
+  uint32_t events;
+  uint8_t nextIndex;
+  expCounterIsr++;
    // original from twai_intr_handler_main()
-  //events = twai_hal_get_events(&twai_context);    //Get the events that triggered the interrupt
-  //if (events & TWAI_HAL_EVENT_RX_BUFF_FRAME) {
-  //uint32_t msg_count = twai_hal_get_rx_msg_count(&twai_context);
-  // for (uint32_t i = 0; i < msg_count; i++) {
-  //      twai_hal_frame_t frame;
-  // if (twai_hal_read_rx_buffer_and_clear(&twai_context, &frame)) {
-  // }
-  //}
+  events = twai_hal_get_events(&twai_context);    //Get the events that triggered the interrupt
+  if (events & TWAI_HAL_EVENT_RX_BUFF_FRAME) {
+    uint32_t msg_count = twai_hal_get_rx_msg_count(&twai_context);
+    for (uint32_t i = 0; i < msg_count; i++) {
+        twai_hal_frame_t frame;
+        if (twai_hal_read_rx_buffer_and_clear(&twai_context, &frame)) {
+            expCounterMsg++;
+            nextIndex = (iRxFifoWriteIndex+1) % CAN_RX_FIFO_SIZE;
+            if (nextIndex!=iRxFifoReadIndex) {
+              /* we still have space free. Add the frame to the FIFO. */
+              memcpy(&(aRxFifo[iRxFifoWriteIndex]), &frame, sizeof(frame));
+              iRxFifoWriteIndex=nextIndex;
+            } else {
+              /* no free space in FIFO. Discard the frame and count the lost frame. */
+              expCounterLostFrames++;
+            }
+        }
+    }
+  }
 }
 
 
@@ -307,12 +343,6 @@ void experimentalInitOne(void) {
   Serial.println("ExpInitOne: 3"); Serial.flush();
 }
 
-void experimentalInitTwo(void) {
-  Serial.println("ExpInitTwo: 1"); Serial.flush();
-  //esp_intr_dump();   
-  Serial.println("ExpInitTwo: 2"); Serial.flush();
-}
-
 void ESP32CAN::_init()
 {
     if (debuggingMode) { Serial.println("Built in CAN Init in _init()"); Serial.flush(); }
@@ -325,29 +355,6 @@ void ESP32CAN::_init()
     }
     if (debuggingMode) { Serial.println("Built in CAN Init Step 2"); Serial.flush(); }
 
-    #ifndef EXPERIMENTAL_OWN_TWAI_DRIVER
-    if (!initializedResources)
-    {
-        if (debuggingMode) { Serial.println("Built in CAN Init Step 3"); Serial.flush(); }
-        //printf("Initializing resources for built-in CAN\n");
-
-                                 //Queue size, item size
-        callbackQueue = xQueueCreate(16, sizeof(CAN_FRAME));
-        rx_queue = xQueueCreate(rxBufferSize, sizeof(CAN_FRAME));
-
-                  //func        desc    stack, params, priority, handle to task
-        xTaskCreate(&task_CAN, "CAN_RX", 8192, this, 15, NULL);
-        if (debuggingMode) { Serial.println("Built in CAN Init Step 8"); Serial.flush(); }
-        //this next task implements our better filtering on top of the TWAI library. Accept all frames then filter in here
-        /* Bug: On the ESP32S3, the created task hangs, because the twai does not give the control to the OS if the twai is not initialized.
-           That's why we cannot start this task here, but later */
-        //xTaskCreatePinnedToCore(&task_LowLevelRX, "CAN_LORX", 4096, this, 19, NULL, 1);
-        if (debuggingMode) { Serial.println("Built in CAN Init Step 9"); Serial.flush(); }
-        xTaskCreatePinnedToCore(&CAN_WatchDog_Builtin, "CAN_WD_BI", 2048, this, 10, NULL, 1);
-        if (debuggingMode) { Serial.println("Built in CAN Init Step x"); Serial.flush(); }
-        initializedResources = true;
-    }
-    #endif
 }
 
 uint32_t ESP32CAN::init(uint32_t ul_baudrate)
@@ -438,38 +445,13 @@ void ESP32CAN::setListenOnlyMode(bool state)
 void ESP32CAN::enable()
 {
   experimentalInitOne();
-
-  #ifndef EXPERIMENTAL_OWN_TWAI_DRIVER
-    if (twai_driver_install(&twai_general_cfg, &twai_speed_cfg, &twai_filters_cfg) == ESP_OK)
-    {
-        Serial.println("TWAI Driver installed");
-    } else {
-        Serial.println("Failed to install TWAI driver");
-        return;
-    }
-    // Start TWAI driver
-    if (twai_start() == ESP_OK) {
-        Serial.println("TWAI Driver started");
-    } else {
-        Serial.println("Failed to start TWAI driver");
-        return;
-    }
-    /* create the receive task. This needs to be done after the twai_driver_install() and twai_start(), otherwise
-       the task will block (at least on ESP32S3 with Arduino IDE of 2023-10-02) */
-    if (!isCanLowLevelRxTaskCreated) {
-      xTaskCreatePinnedToCore(&task_LowLevelRX, "CAN_LORX", 4096, this, 19, NULL, 1);
-      isCanLowLevelRxTaskCreated = true;
-    }
-    #endif
-    /* experimental: second part of the init */
-    experimentalInitTwo();
 }
 
 void ESP32CAN::disable()
 {
     twai_stop();
-    vTaskDelay(pdMS_TO_TICKS(100)); //a bit of delay here seems to fix a race condition triggered by task_LowLevelRX
-    twai_driver_uninstall();
+    //vTaskDelay(pdMS_TO_TICKS(100)); //a bit of delay here seems to fix a race condition triggered by task_LowLevelRX
+    //twai_driver_uninstall();
 }
 
 //This function is too big to be running in interrupt context. Refactored so it doesn't.

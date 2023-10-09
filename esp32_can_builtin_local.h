@@ -86,6 +86,9 @@ public:
   uint32_t get_rx_buff(CAN_FRAME &msg);
   bool processFrame(twai_message_t &frame);
   void sendCallback(CAN_FRAME *frame);
+  void demo_checkForReceivedFramesAndConsume(void);
+  uint8_t isReceiveDataAvailable(void);
+  void consumeReceivedData(CAN_FRAME &msg);
 
   void setCANPins(gpio_num_t rxPin, gpio_num_t txPin);
 

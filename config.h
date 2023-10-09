@@ -101,7 +101,7 @@ struct CANFDSettings {
 struct EEPROMSettings {
     CANFDSettings canSettings[NUM_BUSES];
 
-    boolean useBinarySerialComm; //use a binary protocol on the serial link or human readable format?
+    boolean useBinarySerialComm=1; /* binary is the normal way for SavvyCAN GVRET. use a binary protocol on the serial link or human readable format? */
 
     uint8_t logLevel; //Level of logging to output on serial line
     uint8_t systemType; //0 = A0RET, 1 = EVTV ESP32 Board, 2 = Macchine 5-CAN board
