@@ -427,10 +427,6 @@ int CAN_COMMON::watchForRange(uint32_t id1, uint32_t id2)
 //these next few functions would normally be pure abstract but they're implemented here
 //so that not every class needs to implement FD functionality to work.
 #ifdef USE_CANFD
-uint32_t CAN_COMMON::get_rx_buffFD(CAN_FRAME_FD &msg)
-{
-	return 0;
-}
 uint32_t CAN_COMMON::set_baudrateFD(uint32_t nominalSpeed, uint32_t dataSpeed)
 {
 	return 0;

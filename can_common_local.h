@@ -211,12 +211,8 @@ public:
 	virtual void enable() = 0;
 	virtual void disable() = 0;
 	virtual bool sendFrame(CAN_FRAME& txFrame) = 0;
-	virtual bool rx_avail() = 0;
-	virtual uint16_t available() = 0; //like rx_avail but returns the number of waiting frames
-	virtual uint32_t get_rx_buff(CAN_FRAME &msg) = 0;
     //These aren't abstract because not all CAN drivers would support FD
     #ifdef USE_CANFD
-    virtual uint32_t get_rx_buffFD(CAN_FRAME_FD &msg);
     virtual uint32_t set_baudrateFD(uint32_t nominalSpeed, uint32_t dataSpeed);
     virtual bool sendFrameFD(CAN_FRAME_FD& txFrame);
     virtual uint32_t initFD(uint32_t nominalRate, uint32_t dataRate);    
@@ -225,7 +221,6 @@ public:
     //wrapper for syntactic sugar reasons
     //note to my dumb self - functions cannot be both virtual and have multiple versions where the parameter list is different
     //you have to pick one or the other.
-	inline uint32_t read(CAN_FRAME &msg) { return get_rx_buff(msg); }    
     int watchFor(); //allow anything through
 	int watchFor(uint32_t id); //allow just this ID through (automatic determination of extended status)
     int watchFor(uint32_t id, uint32_t mask); //allow a range of ids through
@@ -255,7 +250,6 @@ public:
 
     //pubic API for CAN-FD mode
     #ifdef USE_CANFD
-    inline uint32_t readFD(CAN_FRAME_FD &msg) { return get_rx_buffFD(msg); }
     uint32_t beginFD(uint32_t nominalBaudRate, uint32_t fastBaudRate);
     uint32_t beginFD(uint32_t nominalBaudRate, uint32_t fastBaudRate, uint8_t enPin);
     uint32_t beginFD();

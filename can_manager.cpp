@@ -95,22 +95,4 @@ void CANManager::loop()
         displayFrame(incoming, 0);
         maxLength = wifiGVRET.numAvailableBytes();
     }
-    
-        while ( (CAN0.available() > 0) && (maxLength < (WIFI_BUFF_SIZE - 80)))
-        {
-            if (settings.canSettings[0].fdMode == 0)
-            {
-                CAN0.read(incoming);
-                addBits(0, incoming);
-                displayFrame(incoming, 0);
-            }
-            else
-            {
-            }
-            //toggleRXLED();
-            //if ( (incoming.id > 0x7DF && incoming.id < 0x7F0) || elmEmulator.getMonitorMode() ) elmEmulator.processCANReply(incoming);
-            wifiLength = wifiGVRET.numAvailableBytes();
-            maxLength = wifiLength;
-        }
-
 }

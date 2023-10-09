@@ -59,35 +59,69 @@ void wifihandler_sendBufferedData(void) {
 void wifihandler_sendAliveToTelnet(void) {
   uint8_t i;
   uint16_t aliveCanID;
-  i=0;
-  aliveCanID = 0x1000; /* simulated CAN ID. Real IDs are in range 0 to 0x7FF. */
-  #define whichBus 0
+    i=0;
+    
+    aliveCanID = 0x1000; /* simulated CAN ID. Real IDs are in range 0 to 0x7FF. */
+    #define whichBus 0
 
-        alivebuffer[i++] = 0xF1;
-        alivebuffer[i++] = 0; //0 = canbus frame sending
-        uint32_t now = micros();
-        alivebuffer[i++] = (uint8_t)(now & 0xFF);
-        alivebuffer[i++] = (uint8_t)(now >> 8);
-        alivebuffer[i++] = (uint8_t)(now >> 16);
-        alivebuffer[i++] = (uint8_t)(now >> 24);
-        alivebuffer[i++] = (uint8_t)(aliveCanID & 0xFF);
-        alivebuffer[i++] = (uint8_t)(aliveCanID >> 8);
-        alivebuffer[i++] = (uint8_t)(aliveCanID >> 16);
-        alivebuffer[i++] = (uint8_t)(aliveCanID >> 24);
-        alivebuffer[i++] = 8 + (uint8_t)(whichBus << 4);
-        /* 8 data bytes */
-        alivebuffer[i++] = (uint8_t)(aliveCounter>>24);
-        alivebuffer[i++] = (uint8_t)(aliveCounter>>16);
-        alivebuffer[i++] = (uint8_t)(aliveCounter>>8);
-        alivebuffer[i++] = (uint8_t)(aliveCounter);
-        alivebuffer[i++] = 0x55;
-        alivebuffer[i++] = 0x66;
-        alivebuffer[i++] = 0x77;
-        alivebuffer[i++] = 0x88;
-        alivebuffer[i++] = 0; /* checksum, but not used. */
-        if (telnetClient && telnetClient.connected())
-        {
-            telnetClient.write(alivebuffer, i);
-        }
-        aliveCounter++;
+    alivebuffer[i++] = 0xF1;
+    alivebuffer[i++] = 0; //0 = canbus frame sending
+    uint32_t now = micros();
+    alivebuffer[i++] = (uint8_t)(now & 0xFF);
+    alivebuffer[i++] = (uint8_t)(now >> 8);
+    alivebuffer[i++] = (uint8_t)(now >> 16);
+    alivebuffer[i++] = (uint8_t)(now >> 24);
+    alivebuffer[i++] = (uint8_t)(aliveCanID & 0xFF);
+    alivebuffer[i++] = (uint8_t)(aliveCanID >> 8);
+    alivebuffer[i++] = (uint8_t)(aliveCanID >> 16);
+    alivebuffer[i++] = (uint8_t)(aliveCanID >> 24);
+    alivebuffer[i++] = 8 + (uint8_t)(whichBus << 4);
+    /* 8 data bytes */
+    alivebuffer[i++] = (uint8_t)(aliveCounter>>24);
+    alivebuffer[i++] = (uint8_t)(aliveCounter>>16);
+    alivebuffer[i++] = (uint8_t)(aliveCounter>>8);
+    alivebuffer[i++] = (uint8_t)(aliveCounter);
+    alivebuffer[i++] = (uint8_t)(expCounterMsg>>24);
+    alivebuffer[i++] = (uint8_t)(expCounterMsg>>16);
+    alivebuffer[i++] = (uint8_t)(expCounterMsg>>8);
+    alivebuffer[i++] = (uint8_t)expCounterMsg;
+    alivebuffer[i++] = 0; /* checksum, but not used. */
+    if (telnetClient && telnetClient.connected())
+    {
+        telnetClient.write(alivebuffer, i);
+    }
+    aliveCounter++;
+    
+    /* another "virtual" message, with statistics data */
+    i=0;
+    aliveCanID = 0x1001; /* simulated CAN ID. Real IDs are in range 0 to 0x7FF. */
+    #define whichBus 0
+
+    alivebuffer[i++] = 0xF1;
+    alivebuffer[i++] = 0; //0 = canbus frame sending
+    now = micros();
+    alivebuffer[i++] = (uint8_t)(now & 0xFF);
+    alivebuffer[i++] = (uint8_t)(now >> 8);
+    alivebuffer[i++] = (uint8_t)(now >> 16);
+    alivebuffer[i++] = (uint8_t)(now >> 24);
+    alivebuffer[i++] = (uint8_t)(aliveCanID & 0xFF);
+    alivebuffer[i++] = (uint8_t)(aliveCanID >> 8);
+    alivebuffer[i++] = (uint8_t)(aliveCanID >> 16);
+    alivebuffer[i++] = (uint8_t)(aliveCanID >> 24);
+    alivebuffer[i++] = 8 + (uint8_t)(whichBus << 4);
+    /* 8 data bytes */
+    alivebuffer[i++] = (uint8_t)(expCounterLostFrames>>24);
+    alivebuffer[i++] = (uint8_t)(expCounterLostFrames>>16);
+    alivebuffer[i++] = (uint8_t)(expCounterLostFrames>>8);
+    alivebuffer[i++] = (uint8_t)(expCounterLostFrames);
+    alivebuffer[i++] = (uint8_t)(0);
+    alivebuffer[i++] = (uint8_t)(0);
+    alivebuffer[i++] = (uint8_t)(0);
+    alivebuffer[i++] = (uint8_t)(0);
+    alivebuffer[i++] = 0; /* checksum, but not used. */
+    if (telnetClient && telnetClient.connected())
+    {
+        telnetClient.write(alivebuffer, i);
+    }
+
 }

@@ -79,13 +79,8 @@ public:
   void enable();
   void disable();
   bool sendFrame(CAN_FRAME& txFrame);
-  bool rx_avail();
   void setTXBufferSize(int newSize);
   void setRXBufferSize(int newSize);
-  uint16_t available(); //like rx_avail but returns the number of waiting frames
-  uint32_t get_rx_buff(CAN_FRAME &msg);
-  bool processFrame(twai_message_t &frame);
-  void sendCallback(CAN_FRAME *frame);
   void demo_checkForReceivedFramesAndConsume(void);
   uint8_t isReceiveDataAvailable(void);
   void consumeReceivedData(CAN_FRAME &msg);
@@ -96,7 +91,6 @@ public:
 
 protected:
   bool initializedResources;
-  bool isCanLowLevelRxTaskCreated;
   int cyclesSinceTraffic;
 
 private:
@@ -105,6 +99,5 @@ private:
   int rxBufferSize;
 };
 
-extern QueueHandle_t callbackQueue;
 
 #endif

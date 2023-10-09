@@ -20,9 +20,6 @@ twai_general_config_t twai_general_cfg = TWAI_GENERAL_CONFIG_DEFAULT(GPIO_NUM_17
 twai_timing_config_t twai_speed_cfg = TWAI_TIMING_CONFIG_500KBITS();
 twai_filter_config_t twai_filters_cfg = TWAI_FILTER_CONFIG_ACCEPT_ALL();
 
-QueueHandle_t callbackQueue;
-QueueHandle_t rx_queue;
-
 /*************************** begin experimental ***************************************/
 #define EXPERIMENTAL_OWN_TWAI_DRIVER
 #ifdef EXPERIMENTAL_OWN_TWAI_DRIVER
@@ -81,7 +78,6 @@ ESP32CAN::ESP32CAN(gpio_num_t rxPin, gpio_num_t txPin) : CAN_COMMON(32)
     twai_general_cfg.tx_io = txPin;
     cyclesSinceTraffic = 0;
     initializedResources = false;
-    isCanLowLevelRxTaskCreated = false;
     twai_general_cfg.tx_queue_len = BI_TX_BUFFER_SIZE;
     twai_general_cfg.rx_queue_len = 6;
     rxBufferSize = BI_RX_BUFFER_SIZE;
@@ -102,7 +98,6 @@ ESP32CAN::ESP32CAN() : CAN_COMMON(BI_NUM_FILTERS)
         filters[i].configured = false;
     }
     initializedResources = false;
-    isCanLowLevelRxTaskCreated = false;
     cyclesSinceTraffic = 0;
 }
 
@@ -134,55 +129,6 @@ void CAN_WatchDog_Builtin( void *pvParameters )
                 }
             }
         }
-    }
-}
-
-
-/*
-Issue callbacks to registered functions and objects
-Used to keep this kind of thing out of the interrupt handler
-The callback type and mailbox are passed in the fid member of the
-CAN_FRAME struct. It isn't really used by anything.
-Layout of the storage:
-bit   31 -    If set indicates an object callback
-bits  24-30 - Idx into listener table
-bits  0-7   - Mailbox number that triggered callback
-*/
-void task_CAN( void *pvParameters )
-{
-    ESP32CAN* espCan = (ESP32CAN*)pvParameters;
-    CAN_FRAME rxFrame;
-
-    while (1)
-    {
-        //receive next CAN frame from queue and fire off the callback
-        if(xQueueReceive(callbackQueue, &rxFrame, portMAX_DELAY)==pdTRUE)
-        {
-            espCan->sendCallback(&rxFrame);
-        }
-    }
-}
-
-void ESP32CAN::sendCallback(CAN_FRAME *frame)
-{
-    //frame buffer
-    CANListener *thisListener;
-    int mb;
-    int idx;
-
-    mb = (frame->fid & 0xFF);
-    if (mb == 0xFF) mb = -1;
-
-    if (frame->fid & 0x80000000ul) //object callback
-    {
-        idx = (frame->fid >> 24) & 0x7F;
-        thisListener = listener[idx];
-        thisListener->gotFrame(frame, mb);
-    }
-    else //C function callback
-    {
-        if (mb > -1) (*cbCANFrame[mb])(frame);
-        else (*cbGeneral)(frame);
     }
 }
 
@@ -454,70 +400,6 @@ void ESP32CAN::disable()
     //twai_driver_uninstall();
 }
 
-//This function is too big to be running in interrupt context. Refactored so it doesn't.
-bool ESP32CAN::processFrame(twai_message_t &frame)
-{
-    CANListener *thisListener;
-    CAN_FRAME msg;
-
-    cyclesSinceTraffic = 0; //reset counter to show that we are receiving traffic
-
-    msg.id = frame.identifier;
-    msg.length = frame.data_length_code;
-    msg.rtr = frame.rtr;
-    msg.extended = frame.extd;
-    for (int i = 0; i < 8; i++) msg.data.byte[i] = frame.data[i];
-    
-    for (int i = 0; i < BI_NUM_FILTERS; i++)
-    {
-        if (!filters[i].configured) continue;
-        if ((msg.id & filters[i].mask) == filters[i].id && (filters[i].extended == msg.extended))
-        {
-            //frame is accepted, lets see if it matches a mailbox callback
-            if (cbCANFrame[i])
-            {
-                msg.fid = i;
-                xQueueSend(callbackQueue, &msg, 0);
-                return true;
-            }
-            else if (cbGeneral)
-            {
-                msg.fid = 0xFF;
-                xQueueSend(callbackQueue, &msg, 0);
-                return true;
-            }
-            else
-            {
-                for (int listenerPos = 0; listenerPos < SIZE_LISTENERS; listenerPos++)
-                {
-                    thisListener = listener[listenerPos];
-                    if (thisListener != NULL)
-                    {
-                        if (thisListener->isCallbackActive(i)) 
-				        {
-					        msg.fid = 0x80000000ul + (listenerPos << 24ul) + i;
-                            xQueueSend(callbackQueue, &msg, 0);
-                            return true;
-				        }
-				        else if (thisListener->isCallbackActive(numFilters)) //global catch-all 
-				        {
-                            msg.fid = 0x80000000ul + (listenerPos << 24ul) + 0xFF;
-					        xQueueSend(callbackQueue, &msg, 0);
-                            return true;
-				        }
-                    }
-                }
-            }
-            
-            //otherwise, send frame to input queue
-            xQueueSend(rx_queue, &msg, 0);
-            if (debuggingMode) Serial.write('_');
-            return true;
-        }
-    }
-    return false;
-}
-
 bool ESP32CAN::sendFrame(CAN_FRAME& txFrame)
 {
     twai_message_t __TX_frame;
@@ -549,27 +431,4 @@ bool ESP32CAN::sendFrame(CAN_FRAME& txFrame)
     return true;
 }
 
-bool ESP32CAN::rx_avail()
-{
-    if (!rx_queue) return false;
-    return uxQueueMessagesWaiting(rx_queue) > 0?true:false;
-}
-
-uint16_t ESP32CAN::available()
-{
-    if (!rx_queue) return 0;
-    return uxQueueMessagesWaiting(rx_queue);
-}
-
-uint32_t ESP32CAN::get_rx_buff(CAN_FRAME &msg)
-{
-    CAN_FRAME frame;
-    //receive next CAN frame from queue
-    if(xQueueReceive(rx_queue,&frame, 0) == pdTRUE)
-    {
-        msg = frame; //do a copy in the case that the receive worked
-        return true;
-    }
-    return false; //otherwise we leave the msg variable alone and just return false
-}
 

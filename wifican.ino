@@ -65,10 +65,6 @@ void setup()
     Serial.begin(115200);
     while(!Serial){delay(100);}
 
-    /* For debugging, show the task priority */
-    Serial.print("Setup: priority = ");
-    Serial.println(uxTaskPriorityGet(NULL));
-
     /* Setup the supply for the mode switch, and read the switch */
     pinMode(PIN_TESTA, OUTPUT);
     pinMode(PIN_MODESWITCH_SUPPLY, OUTPUT);

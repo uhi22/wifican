@@ -32,9 +32,13 @@ NS_ :
     SG_MUL_VAL_
 
 BS_: 
-BU_: 
-BO_ 4096 wifican_dev0: 8 Vector__XXX
-   SG_ wifican_alivecounter : 7|32@0+ (1,0) [0|1e+06] "" Vector__XXX
+BU_: wifican 
+BO_ 4096 wificanStatistics1: 8 wifican
+   SG_ wificanAliveCounter : 7|32@0+ (1,0) [0|1e+09] "" Vector__XXX
+   SG_ wificanTotalRxMessages : 39|32@0+ (1,0) [0|1e+09] "" Vector__XXX
+
+BO_ 4097 wificanStatistics2: 8 wifican
+   SG_ wificanLostRxFrames : 7|32@0+ (1,0) [0|1e+09] "" Vector__XXX
 
 BA_DEF_ BO_ "GenMsgBackgroundColor" STRING ;
 BA_DEF_ BO_ "GenMsgForegroundColor" STRING ;
@@ -42,10 +46,11 @@ BA_DEF_ BO_ "matchingcriteria" INT 0 0;
 BA_DEF_ BO_ "filterlabeling" INT 0 0;
 BA_DEF_ BO_ "matchingcriteria" INT 0 0;
 BA_DEF_ BO_ "filterlabeling" INT 0 0;
-BA_ "GenMsgForegroundColor" BO_ 4096 "#ff00ff";
+BA_DEF_ BO_ "matchingcriteria" INT 0 0;
+BA_DEF_ BO_ "filterlabeling" INT 0 0;
 BA_DEF_DEF_ "GenMsgBackgroundColor" "#ffffff";
 BA_DEF_DEF_ "GenMsgForegroundColor" "#000000";
 BA_DEF_DEF_ "matchingcriteria" 0;
-BA_DEF_DEF_ "filterlabeling" 1;
+BA_DEF_DEF_ "filterlabeling" 0;
 BA_DEF_DEF_ "matchingcriteria" 0;
 BA_DEF_DEF_ "filterlabeling" true;
