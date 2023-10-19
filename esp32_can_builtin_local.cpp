@@ -39,6 +39,13 @@ twai_filter_config_t twai_filters_cfg = TWAI_FILTER_CONFIG_ACCEPT_ALL();
 #define TWAI_ISR_ATTR
 #define TWAI_MALLOC_CAPS    MALLOC_CAP_DEFAULT
 #endif  //CONFIG_TWAI_ISR_IN_IRAM
+
+#define TWAI_CHECK(cond, ret_val) ({                                        \
+            if (!(cond)) {                                                  \
+                return (ret_val);                                           \
+            }                                                               \
+})
+
 intr_handle_t experimental_isr_handle;
 static twai_hal_context_t twai_context;
 volatile uint32_t expCounterIsr;
@@ -400,9 +407,30 @@ void ESP32CAN::disable()
     //twai_driver_uninstall();
 }
 
+esp_err_t my_twai_transmit(const twai_message_t *message) {
+    /* based on: C:\esp-idf-v4.4.4\components\driver\twai.c,
+    but without queue. This means: If the application sends
+    faster than the CAN is able to handle, the message will
+    be lost. A queue would not improve this situation long term. */
+    
+    /* Check arguments */
+    TWAI_CHECK(message != NULL, ESP_ERR_INVALID_ARG);
+    TWAI_CHECK((message->data_length_code <= TWAI_FRAME_MAX_DLC) || message->dlc_non_comp, ESP_ERR_INVALID_ARG);
+    
+    /* Format frame */
+    esp_err_t ret = ESP_FAIL;
+    twai_hal_frame_t tx_frame;
+    twai_hal_format_frame(message, &tx_frame);
+    /* try to send the frame immediately */
+    twai_hal_set_tx_buffer_and_transmit(&twai_context, &tx_frame);
+    ret = ESP_OK;
+    return ret;
+}
+
 bool ESP32CAN::sendFrame(CAN_FRAME& txFrame)
 {
     twai_message_t __TX_frame;
+    int returnCode;
 
     __TX_frame.identifier = txFrame.id;
     __TX_frame.data_length_code = txFrame.length;
@@ -410,9 +438,8 @@ bool ESP32CAN::sendFrame(CAN_FRAME& txFrame)
     __TX_frame.extd = txFrame.extended;
     for (int i = 0; i < 8; i++) __TX_frame.data[i] = txFrame.data.byte[i];
 
-    //don't wait long if the queue was full. The end user code shouldn't be sending faster
-    //than the buffer can empty. Set a bigger TX buffer or delay sending if this is a problem.
-    switch (twai_transmit(&__TX_frame, pdMS_TO_TICKS(4)))
+    returnCode = my_twai_transmit(&__TX_frame);
+    switch (returnCode)
     {
     case ESP_OK:
         if (debuggingMode) Serial.write('<');
@@ -424,7 +451,10 @@ bool ESP32CAN::sendFrame(CAN_FRAME& txFrame)
     case ESP_FAIL:
     case ESP_ERR_INVALID_STATE:
     case ESP_ERR_NOT_SUPPORTED:
-        if (debuggingMode) Serial.write('!');
+        if (debuggingMode) {
+            Serial.write('!');
+            Serial.print(returnCode);
+        }
         break;
     }
     

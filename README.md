@@ -71,7 +71,7 @@ So we end-up with the following features for the moment:
 
 The states and transitions of the ESP32S3 CAN driver are described here: https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/api-reference/peripherals/twai.html
 
-### How did the CAN reception work (in the old world with espressif TWAI driver?
+### How did the CAN reception work (in the old world with espressif TWAI driver)?
 
 - During startup, the task task_LowLevelRX is started.
 - The task_LowLevelRX suspends in twai_receive().
@@ -95,6 +95,16 @@ attachCANInterrupt() --> CAN_COMMON::setGeneralCallback() sets the cbGeneral.
 canBuses[i]->watchFor() --> setRXFilter()
 CAN_COMMON::attachCANInterrupt() --> CAN0.setCallback() --> 
 ...tbd...
+
+### Where is the espressif TWAI driver stored?
+
+Source code in the espressif IDE:
+- C:\esp-idf-v4.4.4\components\driver\twai.c
+
+Header and lib in the arduino IDE:
+- C:\Users\uwemi\AppData\Local\Arduino15\packages\esp32\hardware\esp32\2.0.13\tools\sdk\esp32s3\include\driver\include\driver\twai.h
+- C:\Users\uwemi\AppData\Local\Arduino15\packages\esp32\hardware\esp32\2.0.13\tools\sdk\esp32s3\lib\libdriver.a
+
 
 ### Is useBinarySerialComm true?
 

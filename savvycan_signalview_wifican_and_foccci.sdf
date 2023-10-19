@@ -1,0 +1,11 @@
+SV1,1000,wificanStatistics1,wificanAliveCounter
+SV1,1000,wificanStatistics1,wificanTotalRxMessages
+SV1,1001,wificanStatistics2,wificanLostRxFrames
+SV1,567,FOCCCI01,foccci_uptime_s
+SV1,567,FOCCCI01,foccciCheckpoint
+SV1,568,foccciFast01,EVSEPresentVoltage
+SV1,568,foccciFast01,uCcsInlet_V
+SV1,569,foccciTemperatures01,TempCPU
+SV1,569,foccciTemperatures01,Temp1
+SV1,569,foccciTemperatures01,Temp2
+SV1,569,foccciTemperatures01,Temp3
