@@ -7,6 +7,10 @@ Bridge between Wifi and CAN.
 
 ## News
 
+### 2024-04-24
+
+Wifican used by forum members, and description on the openinverter wiki available.
+
 ### 2023-10-10
 
 Receive path runs much more stable with the own TWAI FIFO driver. Transmit path not yet implemented.
@@ -59,6 +63,47 @@ So we end-up with the following features for the moment:
 - In the connection window, set the bus speed and check the "Enable bus" checkbox.
 - Connect the CANH and CANL to your CAN network. The SavvyCAN should show the incoming traffic.
 - SavvyCAN -> Menu -> SendFrames -> Custom allows you to transmit frames.
+
+## The Longer Quick Start Guide
+
+(Collecting the experiences from https://openinverter.org/forum/viewtopic.php?p=69766#p69766 and https://openinverter.org/forum/viewtopic.php?p=69881#p69881 and https://openinverter.org/wiki/Getting_started_with_CAN_bus)
+
+1. Install the Arduino IDE (e.g. version 2.2.1) and the ESP32s3 board support.
+2. Solder a 3.3V CAN transceiver board to the ESP32s3 board. This needs just four wires: 3.3V, ground, CAN_RX (pin 4), CAN_TX (pin 5). Attention: There are cheap CAN transceiver boards on Aliexpress which do not work, and also wrongly labeled CAN transceiver chips. It makes sense to obtain the transceiver from a reliable source.
+3. Connect a switch, which connects the pin35 either to ground or to pin 47. (See chapter wifi modes below)
+4. Create a new folder C:\Sketchfolder
+5. Open in a browser https://github.com/uhi22/wifican
+6. Green Button "Code", choose "Download zip". This creates a wifican-main.zip in the downloads folder.
+7. Copy this zip into C:\Sketchfolder
+8. Unzip, and arrange the folders in the way that you have the folder C:\Sketchfolder\wifican, and in this is the wifican.ino. This is because the Arduino IDE takes the folder name as name of the sketch, and the main ino file needs to have the same name.
+9. Start the Arduino IDE. In my case it is Arduino IDE 2.2.1.
+10. File -> Open..., navigate to C:\Sketchfolder\wifican\wifican.ino. This should directly show all files, with the wifican.ino as most left, because it is the main file.
+11. Choose the board "ESP32S3 Dev Module"
+12. Rename the wifi_credentials_template.h to wifi_credentials.h, and enter the credentials of your home wifi there.
+13. Make sure that your home wifi is a 2.4GHz wifi. The ESP does not work with 5GHz wifi.
+14. Press the upload button. This takes some minutes to compile, and afterwards it will upload the code to the ESP.
+15. In the Arduino IDE, open the serial monitor. Configure it to 115200 Baud.
+16. Connect pin35 to 3.3V (which are also provided by pin 47). This selects the "home mode".
+17. On the ESP, press shortly the reset button.
+18. In the Arduino IDE, observe the serial monitor. It should show something like this `wifiMode1` and `WifiMode is 'station'. Connecting to myHomeWifi"` and `WiFi connected` and `telnet is listening`
+19. Open SavvyCAN, choose menu -> connection -> open connection window.
+20. Choose "Add new device connection", and "Network connection (GVRET)". In the IP address field there should automatically appear the IP of the wifican device. If not, check whether the wifican device and your PC are in the same Wifi network.
+21. The wifican should now be visible in the connection list, with status "Connected".
+22. In the connection window, set the bus speed and check the "Enable bus" checkbox.
+23. Connect the CANH and CANL to your CAN network. The SavvyCAN should show the incoming traffic.
+24. SavvyCAN -> Menu -> SendFrames -> Custom allows you to transmit frames.
+
+## The two different wifi modes
+
+The wifican supports two different modes of wifi operation. The mode is selected by the level of pin35 during startup.
+(1) The "home mode". In the source code called WIFI_MODE_STATION. This mode is reached when during the boot the pin35 is high (3.3V). The wifican tries to connect to your home wifi. You configured the name of your wifi and the password in wifi_credentials.h. The wifican will be in your home network, so you can use SavvyCAN to observe the CAN while you are in parallel browsing the internet or sending mails.
+(2) The "field mode". In the source code called WIFI_MODE_ACCESS_POINT. This mode is reached if during boot the pin35 is grounded. The wifican will create its own wifi network, called "wifican" and with the password "topsecret", configurable here: https://github.com/uhi22/wifican/blob/3 ... an.ino#L15. To use this mode, go to the wifi settings of your laptop, and connect to the "wifican". This means, you will loose your internet connection, because you change your wifi connection from your router to the wifican. This mode is intended to use when you are outside, where you do not reach your home wifi network anyway.
+
+## Development messages
+
+The wifican privides some debug data as "virtual" CAN messages.
+For debugging your setup, you could add the data base file (dbc) of the "virtual" debug messages into SavvyCAN. This file is here: https://github.com/uhi22/wifican/blob/m ... opment.dbc
+This allows you to see how long the wifican is running (wificanAliveCounter is counting up), and how many messages it has seen on CAN (wificanTotalRxMessages)
 
 ## Results of reverse-engineering
 
