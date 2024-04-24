@@ -96,8 +96,14 @@ So we end-up with the following features for the moment:
 ## The two different wifi modes
 
 The wifican supports two different modes of wifi operation. The mode is selected by the level of pin35 during startup.
-(1) The "home mode". In the source code called WIFI_MODE_STATION. This mode is reached when during the boot the pin35 is high (3.3V). The wifican tries to connect to your home wifi. You configured the name of your wifi and the password in wifi_credentials.h. The wifican will be in your home network, so you can use SavvyCAN to observe the CAN while you are in parallel browsing the internet or sending mails.
-(2) The "field mode". In the source code called WIFI_MODE_ACCESS_POINT. This mode is reached if during boot the pin35 is grounded. The wifican will create its own wifi network, called "wifican" and with the password "topsecret", configurable here: https://github.com/uhi22/wifican/blob/3 ... an.ino#L15. To use this mode, go to the wifi settings of your laptop, and connect to the "wifican". This means, you will loose your internet connection, because you change your wifi connection from your router to the wifican. This mode is intended to use when you are outside, where you do not reach your home wifi network anyway.
+
+### The "home mode"
+
+In the source code called WIFI_MODE_STATION. This mode is reached when during the boot the pin35 is high (3.3V). The wifican tries to connect to your home wifi. You configured the name of your wifi and the password in wifi_credentials.h. The wifican will be in your home network, so you can use SavvyCAN to observe the CAN while you are in parallel browsing the internet or sending mails.
+
+### The "field mode"
+
+In the source code called WIFI_MODE_ACCESS_POINT. This mode is reached if during boot the pin35 is grounded. The wifican will create its own wifi network, called "wifican" and with the password "topsecret", configurable here: https://github.com/uhi22/wifican/blob/44dbb5f25db3eddefdc1b644b3ff3e60f3bf27ec/wifican.ino#L15. To use this mode, go to the wifi settings of your laptop, and connect to the "wifican". This means, you will loose your internet connection, because you change your wifi connection from your router to the wifican. This mode is intended to use when you are outside, where you do not reach your home wifi network anyway.
 
 ## Development messages
 
