@@ -8,6 +8,7 @@ static IPAddress broadcastAddr(255,255,255,255);
 #define ALIVEBUFFERSIZE 50
 uint8_t alivebuffer[ALIVEBUFFERSIZE];
 uint32_t aliveCounter;
+uint32_t debugNSendAttempts;
 
 void wifihandler_cyclic(void) {
     if (isWifiConnected && ((micros() - lastBroadcast) > 1000000ul) ) //every second send out a broadcast ping
@@ -114,6 +115,38 @@ void wifihandler_sendAliveToTelnet(void) {
     alivebuffer[i++] = (uint8_t)(expCounterLostFrames>>16);
     alivebuffer[i++] = (uint8_t)(expCounterLostFrames>>8);
     alivebuffer[i++] = (uint8_t)(expCounterLostFrames);
+    alivebuffer[i++] = (uint8_t)(0);
+    alivebuffer[i++] = (uint8_t)(0);
+    alivebuffer[i++] = (uint8_t)(0);
+    alivebuffer[i++] = (uint8_t)(0);
+    alivebuffer[i++] = 0; /* checksum, but not used. */
+    if (telnetClient && telnetClient.connected())
+    {
+        telnetClient.write(alivebuffer, i);
+    }
+
+    /* another "virtual" message, with statistics data */
+    i=0;
+    aliveCanID = 0x1002; /* simulated CAN ID. Real IDs are in range 0 to 0x7FF. */
+    #define whichBus 0
+
+    alivebuffer[i++] = 0xF1;
+    alivebuffer[i++] = 0; //0 = canbus frame sending
+    now = micros();
+    alivebuffer[i++] = (uint8_t)(now & 0xFF);
+    alivebuffer[i++] = (uint8_t)(now >> 8);
+    alivebuffer[i++] = (uint8_t)(now >> 16);
+    alivebuffer[i++] = (uint8_t)(now >> 24);
+    alivebuffer[i++] = (uint8_t)(aliveCanID & 0xFF);
+    alivebuffer[i++] = (uint8_t)(aliveCanID >> 8);
+    alivebuffer[i++] = (uint8_t)(aliveCanID >> 16);
+    alivebuffer[i++] = (uint8_t)(aliveCanID >> 24);
+    alivebuffer[i++] = 8 + (uint8_t)(whichBus << 4);
+    /* 8 data bytes */
+    alivebuffer[i++] = (uint8_t)(debugNSendAttempts>>24);
+    alivebuffer[i++] = (uint8_t)(debugNSendAttempts>>16);
+    alivebuffer[i++] = (uint8_t)(debugNSendAttempts>>8);
+    alivebuffer[i++] = (uint8_t)(debugNSendAttempts);
     alivebuffer[i++] = (uint8_t)(0);
     alivebuffer[i++] = (uint8_t)(0);
     alivebuffer[i++] = (uint8_t)(0);

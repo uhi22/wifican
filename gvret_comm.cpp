@@ -8,6 +8,8 @@ Implements handling of the GVRET comm protocol, both sending and receiving
 #include "config.h"
 #include "can_manager.h"
 
+extern uint32_t debugNSendAttempts;
+
 void toggleTXLED();
 void toggleRXLED();
 
@@ -24,6 +26,8 @@ void GVRET_Comm_Handler::processIncomingByte(uint8_t in_byte)
 
     uint8_t temp8;
     uint16_t temp16;
+
+    
 
     switch (state) {
     case IDLE:
@@ -223,6 +227,7 @@ void GVRET_Comm_Handler::processIncomingByte(uint8_t in_byte)
                 //this would be the checksum byte. Compute and compare.
                 //temp8 = checksumCalc(buff, step);
                 //Serial.println("BUILD_CAN_FRAME will send frame");
+                debugNSendAttempts++;
                 build_out_frame.rtr = 0;
                 canManager.sendFrame(&CAN0, build_out_frame);
             }
