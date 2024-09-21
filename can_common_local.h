@@ -26,7 +26,7 @@
 
 
 #define SIZE_LISTENERS	4 //number of classes that can register as listeners with this class
-#define CAN_DEFAULT_BAUD	500000
+#define CAN_DEFAULT_BAUD	105000 /* 500000 */
 #ifdef USE_CANFD
   #define CAN_DEFAULT_FD_RATE 4000000
 #endif

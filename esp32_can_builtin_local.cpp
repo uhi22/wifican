@@ -15,9 +15,11 @@
 #include "Arduino.h"
 #include "esp32_can_builtin_local.h"
 
+#define TWAI_TIMING_CONFIG_105KBITS()   {.clk_src = TWAI_CLK_SRC_DEFAULT, .quanta_resolution_hz = 2100000, .brp = 0, .tseg_1 = 15, .tseg_2 = 4, .sjw = 3, .triple_sampling = false}
+
                                                                         //tx,         rx,           mode
 twai_general_config_t twai_general_cfg = TWAI_GENERAL_CONFIG_DEFAULT(GPIO_NUM_17, GPIO_NUM_16, TWAI_MODE_NORMAL);
-twai_timing_config_t twai_speed_cfg = TWAI_TIMING_CONFIG_500KBITS();
+twai_timing_config_t twai_speed_cfg = TWAI_TIMING_CONFIG_105KBITS(); //TWAI_TIMING_CONFIG_500KBITS();
 twai_filter_config_t twai_filters_cfg = TWAI_FILTER_CONFIG_ACCEPT_ALL();
 
 /*************************** begin experimental ***************************************/
@@ -55,6 +57,9 @@ uint8_t experimentalDriverIsInitialized = 0;
 #endif
 /************************************* end experimental *********************************/
 
+
+
+
 //because of the way the TWAI library works, it's just easier to store the valid timings here and anything not found here
 //is just plain not supported. If you need a different speed then add it here. Be sure to leave the zero record at the end
 //as it serves as a terminator
@@ -72,6 +77,7 @@ const VALID_TIMING valid_timings[] =
     //Note that brp can take values in multiples of 2 up to 128 and multiples of 4 up to 256
     //TSEG1 can be 1 to 16 and TSEG2 can be 1 to 8. There is a silent +1 added to the sum of these two.
     //The default clock is 80MHz so plan accordingly
+    {TWAI_TIMING_CONFIG_105KBITS(), 105000},
     {{.brp = 100, .tseg_1 = 7, .tseg_2 = 2, .sjw = 3, .triple_sampling = false}, 80000}, 
     {{.brp = 120, .tseg_1 = 15, .tseg_2 = 4, .sjw = 3, .triple_sampling = false}, 33333},
     //this one is only possible on ECO2 ESP32 or ESP32-S3 not on the older ESP32 chips
@@ -280,7 +286,16 @@ void experimentalInitOne(void) {
   }
   periph_module_reset(PERIPH_TWAI_MODULE);
   periph_module_enable(PERIPH_TWAI_MODULE);            //Enable APB CLK to TWAI peripheral
-  bool init = twai_hal_init(&twai_context);
+
+uint32_t clock_source_hz = 80000000uL;
+uint32_t controller_id = 0;
+
+/* to be compatible to \AppData\Local\Arduino15\packages\esp32\tools\esp32-arduino-libs\idf-release_v5.1-bd2b9390ef\esp32s3 */
+    twai_hal_config_t hal_config = {
+        .controller_id = controller_id,
+        .clock_source_hz = clock_source_hz,
+    };
+  bool init = twai_hal_init(&twai_context, &hal_config);
   assert(init);
   (void)init;
   twai_hal_configure(&twai_context, &twai_speed_cfg, &twai_filters_cfg, DRIVER_DEFAULT_INTERRUPTS, twai_general_cfg.clkout_divider);
@@ -312,7 +327,7 @@ void ESP32CAN::_init()
 
 uint32_t ESP32CAN::init(uint32_t ul_baudrate)
 {
-  Serial.println("Built in CAN Init in init with baudrate"); Serial.flush(); 
+  Serial.print("Built in CAN Init in init with baudrate"); Serial.println(ul_baudrate); Serial.flush(); 
     _init();
     set_baudrate(ul_baudrate);
     if (debuggingMode)

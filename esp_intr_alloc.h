@@ -302,10 +302,12 @@ void esp_intr_disable_source(int inum);
  * @brief Get the lowest interrupt level from the flags
  * @param flags The same flags that pass to `esp_intr_alloc_intrstatus` API
  */
-static inline int esp_intr_flags_to_level(int flags)
-{
-    return __builtin_ffs((flags & ESP_INTR_FLAG_LEVELMASK) >> 1) + 1;
-}
+//#ifndef esp_intr_flags_to_level
+//static inline int esp_intr_flags_to_level(int flags)
+//{
+//    return __builtin_ffs((flags & ESP_INTR_FLAG_LEVELMASK) >> 1) + 1;
+//}
+//#endif
 
 /**@}*/
 

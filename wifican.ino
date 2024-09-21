@@ -16,7 +16,7 @@ const char* password = WIFI_PASSWORD; // Change this to your WiFi password
 
 #define PIN_MODESWITCH_SUPPLY 47
 #define PIN_TESTA 21
-#define PIN_MODESWITCH_INPUT 35
+#define PIN_MODESWITCH_INPUT 8 /* 35 seems not working anymore with AppData\Local\Arduino15\packages\esp32\tools\esp32-arduino-libs\idf-release_v5.1-bd2b9390ef\esp32s3*/
 
 
 EEPROMSettings settings;
@@ -68,9 +68,10 @@ void setup()
     /* Setup the supply for the mode switch, and read the switch */
     pinMode(PIN_TESTA, OUTPUT);
     pinMode(PIN_MODESWITCH_SUPPLY, OUTPUT);
+    pinMode(PIN_MODESWITCH_INPUT, INPUT);
     digitalWrite(PIN_MODESWITCH_SUPPLY, HIGH);
     digitalWrite(PIN_TESTA, HIGH);
-    delay(10);
+    delay(100);
     wifiMode = digitalRead(PIN_MODESWITCH_INPUT);
     Serial.print("wifiMode");
     Serial.println(wifiMode);
@@ -118,7 +119,7 @@ void setup()
     delay(500);
 
     /***** Prepare settings *****/
-    settings.canSettings[0].nomSpeed = 500000;
+    settings.canSettings[0].nomSpeed = CAN_DEFAULT_BAUD;
     settings.canSettings[0].enabled = true;
     settings.canSettings[0].listenOnly = false;
     //settings.canSettings[0].fdSpeed = 5000000;
@@ -196,11 +197,11 @@ void WiFiEvent(WiFiEvent_t event){
             break;
         case ARDUINO_EVENT_WIFI_STA_CONNECTED:
             Serial.println("STA Connected");
-            WiFi.enableIpV6();
+            WiFi.enableIPv6();
             break;
         case ARDUINO_EVENT_WIFI_STA_GOT_IP6:
             Serial.print("STA IPv6: ");
-            Serial.println(WiFi.localIPv6());
+            Serial.println(WiFi.localIP());
             break;
         case ARDUINO_EVENT_WIFI_STA_GOT_IP:
             Serial.print("STA IPv4: ");
