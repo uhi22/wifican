@@ -7,6 +7,18 @@ Bridge between Wifi and CAN.
 
 ## News
 
+### 2024-10-17 CAN baud rate limitations
+
+With the commit from September  2024, the CAN baud rate was changed to 105kBaud, with the goal to support DXBUS (More details here: https://github.com/uhi22/invacare-g50-investigations). This *breaks* the use cases, which require 500kBaud. It is not yet clarified
+whether setting the baud rate in SavvyCAN actually works. This needs further investigations. There is no clean solution at the moment,
+because custom baud rates are not supported in SavvyCAN (https://github.com/collin80/SavvyCAN/issues/469 , https://github.com/collin80/SavvyCAN/issues/654, https://savvycan.com/index.php/forum/welcome-mat/207-custom-speeds).
+
+So the conclusion is:
+* To use 500kBaud, take the version from April 2024 (https://github.com/uhi22/wifican/tree/0a0cf46a09e730d81c4dcf6dd06660cd7e77c16b)
+* To use other custom baud rates, have a look to the commit https://github.com/uhi22/wifican/commit/1e717946a06a594cf2e79b092cbaf7b376e8bb55 to see at which places you need to adapt something. It is not clarified, which places are really effective and which maybe could be removed.
+* If you like investigating, you could find out how the baud rate setting could be improved in SavvyCAN and wifican.
+
+
 ### 2024-04-24
 
 Wifican used by forum members, and description on the openinverter wiki available.
